@@ -12,6 +12,7 @@
     "typescript": "^5.0.0"
   },
   "dependencies": {
+    "chalk": "^5.4.1",
     "prettier": "^3.5.1",
     "prettier-plugin-organize-imports": "^4.1.0"
   }
