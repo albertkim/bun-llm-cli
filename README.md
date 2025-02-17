@@ -8,9 +8,11 @@ It is also a fun way for me to explore Bun's capabilities.
 
 ## Setup
 
-`bun install`
-`bun link`
-`bun link bun-llm-cli`
+```
+bun install
+bun link
+bun link bun-llm-cli
+```
 
 Reference: https://balamurugan16.hashnode.dev/blazingly-fast-cli-with-bun
 
@@ -32,4 +34,6 @@ macos-arm64
 windows-x64
 ```
 
-The file outputs will appear in the `/dist` folder. Pick, run, or distribute the appropriate file for your platform of choice.
+The file outputs will appear in the `/dist` folder. Pick, run, or distribute the appropriate file for your platform of choice. The file sizes are too big to include in the repo, ranging from 50mb - 100mb because they have to package the entire JS runtime engine. One can hope that this will improve in the future.
+
+If bundled file sizes matter, it would be best to use a lower-level language like Go or Rust.
