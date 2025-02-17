@@ -6,7 +6,7 @@ import { join } from "path"
 export const DB_DIR = join(homedir(), ".config", "llm")
 export const DB_PATH = join(DB_DIR, "data.db")
 
-export const setUpAndGetDatabase = () => {
+export async function setUpAndGetDatabase() {
   if (!existsSync(DB_DIR)) {
     mkdirSync(DB_DIR, { recursive: true })
   }

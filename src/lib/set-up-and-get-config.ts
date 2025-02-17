@@ -68,24 +68,24 @@ function validateConfig(config: Record<string, string | number>): ConfigType {
   return validatedConfig
 }
 
-export function getValidatedConfig(): ConfigType {
+export async function getValidatedConfig(): Promise<ConfigType> {
   const existingConfig = JSON.parse(readFileSync(CONFIG_PATH, "utf8"))
   return validateConfig(existingConfig)
 }
 
 // Update the config file with the new config
-function syncFullConfig(config: ConfigType) {
+async function syncFullConfig(config: ConfigType) {
   writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2))
 }
 
-export function syncSingleConfig(key: keyof ConfigType, value: string) {
-  const existingConfig = getValidatedConfig()
+export async function syncSingleConfig(key: keyof ConfigType, value: string) {
+  const existingConfig = await getValidatedConfig()
   existingConfig[key] = value
   syncFullConfig(existingConfig)
   return existingConfig
 }
 
-export const setUpAndGetConfig = () => {
+export async function setUpAndGetConfig() {
   // Check the existing file
   let existingConfig: any = {}
   if (existsSync(CONFIG_PATH)) {
@@ -95,4 +95,10 @@ export const setUpAndGetConfig = () => {
   syncFullConfig(validatedConfig)
 
   return validatedConfig
+}
+
+export async function clearConfig() {
+  if (existsSync(CONFIG_PATH)) {
+    writeFileSync(CONFIG_PATH, JSON.stringify({}, null, 2))
+  }
 }

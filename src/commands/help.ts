@@ -1,15 +1,16 @@
 import { input, select } from "@inquirer/prompts"
 import chalk from "chalk"
-import { setUpAndGetConfig, syncSingleConfig } from "../lib/set-up-and-get-config"
+import { CONFIG_DIR, setUpAndGetConfig, syncSingleConfig } from "../lib/set-up-and-get-config"
 
-export const help = async () => {
+export async function help() {
   console.log(chalk.bold.green("bun-llm-cli"))
   console.log()
-  console.log(chalk.green("A CLI tool for interacting with LLMs"))
-  console.log(chalk.green("Version: 0.0.1"))
+  console.log(chalk("A CLI tool for interacting with LLMs"))
+  console.log(chalk("Version: 0.0.1"))
+  console.log(chalk(`Config directory: ${chalk.underline(CONFIG_DIR)}`))
   console.log()
 
-  const config = setUpAndGetConfig()
+  const config = await setUpAndGetConfig()
   const hasOpenAIKey = config.openai_api_key !== null
   const hasAnthropicKey = config.anthropic_api_key !== null
   const hasGoogleAIKey = config.google_ai_api_key !== null
@@ -30,15 +31,15 @@ export const help = async () => {
       console.log(chalk.green(`Selected provider: ${provider}`))
       // Now prompt for API key input and store it
       const apiKey = await input({
-        message: "Enter your API key"
+        message: "Enter your API key (cmd/ctrl + c to exit):"
       })
 
       if (provider === "OpenAI") {
-        syncSingleConfig("openai_api_key", apiKey)
+        await syncSingleConfig("openai_api_key", apiKey)
       } else if (provider === "Anthropic") {
-        syncSingleConfig("anthropic_api_key", apiKey)
+        await syncSingleConfig("anthropic_api_key", apiKey)
       } else if (provider === "Google") {
-        syncSingleConfig("google_ai_api_key", apiKey)
+        await syncSingleConfig("google_ai_api_key", apiKey)
       }
 
       console.log(chalk.green(`API key: ${apiKey}`))
