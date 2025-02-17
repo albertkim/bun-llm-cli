@@ -73,15 +73,7 @@ if (args.length === 0) {
       process.exit(0)
     }
 
-    const result = await llmText(prompt, provider, model, apiKey)
-    db.run(
-      `INSERT INTO chat_logs (prompt, response, provider, model, created_at)
-       VALUES (?, ?, ?, ?, ?)`,
-      [prompt, result, provider, model, new Date().toISOString()]
-    )
-
-    console.log(chalk.gray(`${provider} - ${model}`))
-    console.log(`${chalk.green(`${result}`)}`)
+    await llmText(prompt, provider, model, apiKey)
   }
 }
 

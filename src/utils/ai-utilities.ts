@@ -1,3 +1,4 @@
+import chalk from "chalk"
 import { OpenAI } from "openai"
 import { getDatabase } from "../lib/database"
 
@@ -62,17 +63,26 @@ export async function llmText(prompt: string, provider: string, model: string, a
 
   const response = await client.chat.completions.create({
     model: model,
-    messages: [...previousMessages, { role: "user" as const, content: prompt }]
+    messages: [...previousMessages, { role: "user" as const, content: prompt }],
+    stream: true // Enable streaming
   })
 
-  const responseText = response.choices[0].message.content
+  let fullResponse = ""
+  process.stdout.write(chalk.gray(`${provider} - ${model}\n`))
 
+  for await (const chunk of response) {
+    const content = chunk.choices[0]?.delta?.content || ""
+    fullResponse += content
+    process.stdout.write(chalk.green(content))
+  }
+  process.stdout.write("\n")
+
+  // Store the complete response in the database
   db.run(
-    `
-    INSERT INTO chat_logs (prompt, response, provider, model, created_at)
-    VALUES (?, ?, ?, ?, ?)
-  `,
-    [prompt, responseText, provider, model, new Date().toISOString()]
+    `INSERT INTO chat_logs (prompt, response, provider, model, created_at)
+     VALUES (?, ?, ?, ?, ?)`,
+    [prompt, fullResponse, provider, model, new Date().toISOString()]
   )
-  return responseText
+
+  return fullResponse
 }
