@@ -65,6 +65,10 @@ if (args.length === 0) {
   while (true) {
     const prompt = await input({ message: ">" })
 
+    if (prompt.trim() === "") {
+      continue
+    }
+
     if (prompt.toLowerCase() === "exit" || prompt.toLowerCase() === "quit") {
       process.exit(0)
     }
@@ -106,48 +110,3 @@ if (args[0] === "clear") {
     console.log(chalk.red("Config not cleared"))
   }
 }
-
-// Identify the first AI provider that has an API key
-const openaiKey = config.openai_api_key
-const anthropicKey = config.anthropic_api_key
-const googleAIKey = config.google_ai_api_key
-
-// If not one of the commands above, accept arguments as a prompt
-const prompt = args.join(" ")
-
-const LLM_TEXT_MODEL_MAPPING = {
-  openai: "gpt-4o-mini",
-  anthropic: "claude-3.5-haiku",
-  google: "gemini-2.0-flash"
-}
-
-let provider: string
-let model: string
-let apiKey: string
-
-if (openaiKey) {
-  provider = "openai"
-  model = LLM_TEXT_MODEL_MAPPING["openai"]
-  apiKey = openaiKey
-} else if (anthropicKey) {
-  provider = "anthropic"
-  model = LLM_TEXT_MODEL_MAPPING["anthropic"]
-  apiKey = anthropicKey
-} else if (googleAIKey) {
-  provider = "google"
-  model = LLM_TEXT_MODEL_MAPPING["google"]
-  apiKey = googleAIKey
-} else {
-  console.log(chalk.red("No AI provider found"))
-  process.exit(1)
-}
-
-const result = await llmText(prompt, provider, model, apiKey)
-db.run(
-  `INSERT INTO chat_logs (prompt, response, provider, model, created_at)
-   VALUES (?, ?, ?, ?, ?)`,
-  [prompt, result, provider, model, new Date().toISOString()]
-)
-
-console.log(chalk.gray(`${provider} - ${model}`))
-console.log(`${chalk.green(`${result}`)}`)
