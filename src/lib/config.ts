@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, writeFileSync } from "fs"
+import { existsSync, readFileSync, unlinkSync, writeFileSync } from "fs"
 import { homedir } from "os"
 import { join } from "path"
 
@@ -99,6 +99,6 @@ export async function setUpAndGetConfig() {
 
 export async function clearConfig() {
   if (existsSync(CONFIG_PATH)) {
-    writeFileSync(CONFIG_PATH, JSON.stringify({}, null, 2))
+    unlinkSync(CONFIG_PATH)
   }
 }

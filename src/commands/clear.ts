@@ -1,4 +1,4 @@
-import { clearConfig } from "../lib/set-up-and-get-config"
+import { clearConfig } from "../lib/config"
 
 export const clear = () => {
   clearConfig()

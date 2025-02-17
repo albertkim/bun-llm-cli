@@ -1,6 +1,6 @@
 import { input, select } from "@inquirer/prompts"
 import chalk from "chalk"
-import { CONFIG_DIR, setUpAndGetConfig, syncSingleConfig } from "../lib/set-up-and-get-config"
+import { CONFIG_DIR, setUpAndGetConfig, syncSingleConfig } from "../lib/config"
 
 export async function help() {
   console.log(chalk.bold.green("bun-llm-cli"))
@@ -43,6 +43,8 @@ export async function help() {
       }
 
       console.log(chalk.green(`API key: ${apiKey}`))
+      console.log(chalk.green("Now, you can prompt your LLM with the following command: llm your-prompt"))
+      process.exit(0)
     } else if (answer === "n") {
       console.log("Exiting...")
     } else {
