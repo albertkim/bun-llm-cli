@@ -47,6 +47,7 @@ const expectedConfig: Record<string, { key: keyof ConfigType; type: string; desc
 }
 
 function getValidatedConfig(config: Record<string, string | number>): ConfigType {
+  // Start with defaults
   const validatedConfig: ConfigType = {
     google_ai_api_key: null,
     google_ai_default_text_model: null,
