@@ -1,12 +1,12 @@
 #! /usr/bin/env bun
 import { input } from "@inquirer/prompts"
 import chalk from "chalk"
+import { AIService } from "./commands/ai-service"
 import { help } from "./commands/help"
 import { version } from "./commands/version"
 import { configStore } from "./stores/config-store"
 import { databaseStore } from "./stores/database-store"
 import { systemStore } from "./stores/system-store"
-import { llmText } from "./utils/ai-utilities"
 
 // Initialize all stores because they're async
 await configStore.init()
@@ -61,6 +61,7 @@ if (args.length === 0) {
 
   console.log(chalk.blue("Welcome to bun-llm-cli!"))
   console.log(chalk.blue("Type 'exit' or press Ctrl+C to quit."))
+
   while (true) {
     const prompt = await input({ message: ">" })
 
@@ -72,7 +73,27 @@ if (args.length === 0) {
       process.exit(0)
     }
 
-    await llmText(prompt, provider, model, apiKey)
+    if (prompt.toLowerCase() === "clear") {
+      const confirmClearChatHistory = await input({
+        message: "Do you want to clear your chat history? (y/n)",
+        default: "n"
+      })
+      if (confirmClearChatHistory === "y") {
+        await databaseStore.clearDatabase()
+      }
+
+      const confirmClearConfig = await input({
+        message: "Do you want to clear your LLM API key configs? (y/n)",
+        default: "n"
+      })
+      if (confirmClearConfig === "y") {
+        await configStore.clearConfig()
+      }
+
+      continue
+    }
+
+    await AIService.getTextResponse(prompt, provider, model, apiKey)
   }
 }
 
@@ -86,18 +107,4 @@ if (args[0] === "--help" || args[0] === "-h") {
 if (args[0] === "--version" || args[0] === "-v") {
   await version()
   process.exit(0)
-}
-
-// Define clear command
-if (args[0] === "clear") {
-  const confirm = await input({
-    message: "Are you sure you want to clear the config?",
-    default: "y"
-  })
-  if (confirm === "y") {
-    await configStore.clearConfig()
-    process.exit(0)
-  } else {
-    console.log(chalk.red("Config not cleared"))
-  }
 }
