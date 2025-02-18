@@ -1,6 +1,6 @@
 import chalk from "chalk"
 import { OpenAI } from "openai"
-import { getDatabase } from "../lib/database"
+import { databaseStore } from "../stores/database-store"
 
 export function getClient(provider: string, apiKey: string) {
   if (provider === "openai") {
@@ -24,7 +24,7 @@ export function getClient(provider: string, apiKey: string) {
 }
 
 export async function llmText(prompt: string, provider: string, model: string, apiKey: string) {
-  const db = await getDatabase()
+  const db = databaseStore.getDatabase()
 
   // Get previous X chat logs if exists
   const previousChatLogs: {

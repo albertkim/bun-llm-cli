@@ -1,24 +1,22 @@
 #! /usr/bin/env bun
 import { input } from "@inquirer/prompts"
 import chalk from "chalk"
-import { existsSync, mkdirSync } from "fs"
-import { homedir } from "os"
-import { join } from "path"
-import { clear } from "./commands/clear"
 import { help } from "./commands/help"
 import { version } from "./commands/version"
-import { setUpAndGetConfig } from "./lib/config"
-import { setUpAndGetDatabase } from "./lib/database"
+import { configStore } from "./stores/config-store"
+import { databaseStore } from "./stores/database-store"
+import { systemStore } from "./stores/system-store"
 import { llmText } from "./utils/ai-utilities"
 
-// Ensure config directory exists
-const dbDir = join(homedir(), ".config", "llm")
-if (!existsSync(dbDir)) {
-  mkdirSync(dbDir, { recursive: true })
-}
+// Initialize all stores because they're async
+await configStore.init()
+await databaseStore.init()
+await systemStore.init()
 
-export const config = await setUpAndGetConfig()
-export const db = await setUpAndGetDatabase()
+// Print system information
+console.log(chalk.green("System Information:"))
+console.log(chalk.green(`OS: ${systemStore.operatingSystem} - Arch: ${systemStore.architecture}`))
+console.log(chalk.green(`CPU: ${systemStore.cpuCores} cores, GPU: ${systemStore.gpu || "None"}`))
 
 // Define command line arguments
 const args = process.argv.slice(2)
@@ -26,9 +24,9 @@ const args = process.argv.slice(2)
 // If no arguments, enter interactive mode
 if (args.length === 0) {
   // Identify the first AI provider that has an API key
-  const openaiKey = config.openai_api_key
-  const anthropicKey = config.anthropic_api_key
-  const googleAIKey = config.google_ai_api_key
+  const openaiKey = configStore.config.openai_api_key
+  const anthropicKey = configStore.config.anthropic_api_key
+  const googleAIKey = configStore.config.google_ai_api_key
 
   if (!openaiKey && !anthropicKey && !googleAIKey) {
     await help()
@@ -61,6 +59,7 @@ if (args.length === 0) {
     process.exit(1)
   }
 
+  console.log(chalk.blue("Welcome to bun-llm-cli!"))
   console.log(chalk.blue("Type 'exit' or press Ctrl+C to quit."))
   while (true) {
     const prompt = await input({ message: ">" })
@@ -96,7 +95,7 @@ if (args[0] === "clear") {
     default: "y"
   })
   if (confirm === "y") {
-    await clear()
+    await configStore.clearConfig()
     process.exit(0)
   } else {
     console.log(chalk.red("Config not cleared"))

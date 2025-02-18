@@ -1,19 +1,18 @@
 import { input, select } from "@inquirer/prompts"
 import chalk from "chalk"
-import { CONFIG_DIR, setUpAndGetConfig, syncSingleConfig } from "../lib/config"
+import { configStore } from "../stores/config-store"
 
 export async function help() {
   console.log(chalk.bold.green("bun-llm-cli"))
   console.log()
   console.log(chalk("A CLI tool for interacting with LLMs"))
   console.log(chalk("Version: 0.0.1"))
-  console.log(chalk(`Config directory: ${chalk.underline(CONFIG_DIR)}`))
+  console.log(chalk(`Config directory: ${chalk.underline(configStore.configDir)}`))
   console.log()
 
-  const config = await setUpAndGetConfig()
-  const hasOpenAIKey = config.openai_api_key !== null
-  const hasAnthropicKey = config.anthropic_api_key !== null
-  const hasGoogleAIKey = config.google_ai_api_key !== null
+  const hasOpenAIKey = configStore.config.openai_api_key !== null
+  const hasAnthropicKey = configStore.config.anthropic_api_key !== null
+  const hasGoogleAIKey = configStore.config.google_ai_api_key !== null
 
   if (!hasOpenAIKey && !hasAnthropicKey && !hasGoogleAIKey) {
     console.log(chalk.red("No LLM API keys found"))
@@ -35,11 +34,11 @@ export async function help() {
       })
 
       if (provider === "OpenAI") {
-        await syncSingleConfig("openai_api_key", apiKey)
+        await configStore.syncSingleConfig("openai_api_key", apiKey)
       } else if (provider === "Anthropic") {
-        await syncSingleConfig("anthropic_api_key", apiKey)
+        await configStore.syncSingleConfig("anthropic_api_key", apiKey)
       } else if (provider === "Google") {
-        await syncSingleConfig("google_ai_api_key", apiKey)
+        await configStore.syncSingleConfig("google_ai_api_key", apiKey)
       }
 
       console.log(chalk.green(`API key: ${apiKey}`))

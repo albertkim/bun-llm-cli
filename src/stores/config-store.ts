@@ -1,9 +1,8 @@
-import { existsSync, readFileSync, unlinkSync, writeFileSync } from "fs"
 import { homedir } from "os"
 import { join } from "path"
 
-export const CONFIG_DIR = join(homedir(), ".config", "llm")
-export const CONFIG_PATH = join(CONFIG_DIR, "config.json")
+const CONFIG_DIR = join(homedir(), ".config", "llm")
+const CONFIG_PATH = join(CONFIG_DIR, "config.json")
 
 type ConfigType = {
   google_ai_api_key: string | null
@@ -47,7 +46,7 @@ const expectedConfig: Record<string, { key: keyof ConfigType; type: string; desc
   }
 }
 
-function validateConfig(config: Record<string, string | number>): ConfigType {
+function getValidatedConfig(config: Record<string, string | number>): ConfigType {
   const validatedConfig: ConfigType = {
     google_ai_api_key: null,
     google_ai_default_text_model: null,
@@ -68,37 +67,57 @@ function validateConfig(config: Record<string, string | number>): ConfigType {
   return validatedConfig
 }
 
-export async function getValidatedConfig(): Promise<ConfigType> {
-  const existingConfig = JSON.parse(readFileSync(CONFIG_PATH, "utf8"))
-  return validateConfig(existingConfig)
-}
+class ConfigStore {
+  public isInitialized: boolean = false
+  public config: ConfigType
+  public configDir: string = CONFIG_DIR
+  public configPath: string = CONFIG_PATH
 
-// Update the config file with the new config
-async function syncFullConfig(config: ConfigType) {
-  writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2))
-}
-
-export async function syncSingleConfig(key: keyof ConfigType, value: string) {
-  const existingConfig = await getValidatedConfig()
-  existingConfig[key] = value
-  syncFullConfig(existingConfig)
-  return existingConfig
-}
-
-export async function setUpAndGetConfig() {
-  // Check the existing file
-  let existingConfig: any = {}
-  if (existsSync(CONFIG_PATH)) {
-    existingConfig = JSON.parse(readFileSync(CONFIG_PATH, "utf8"))
+  constructor() {
+    // Initialize the config with empty defaults
+    // The program entry point should call initializeConfig() because it's async
+    this.config = getValidatedConfig({})
   }
-  const validatedConfig = validateConfig(existingConfig)
-  syncFullConfig(validatedConfig)
 
-  return validatedConfig
-}
+  public async init() {
+    const configFile = Bun.file(CONFIG_PATH)
+    let fileExists = await configFile.exists()
+    let isValidJSON = true
 
-export async function clearConfig() {
-  if (existsSync(CONFIG_PATH)) {
-    unlinkSync(CONFIG_PATH)
+    try {
+      JSON.parse(await configFile.text())
+    } catch (error) {
+      isValidJSON = false
+    }
+
+    let existingConfig: any = {}
+    if (fileExists && isValidJSON) {
+      existingConfig = JSON.parse(await configFile.text())
+    }
+    const validatedConfig = getValidatedConfig(existingConfig)
+    this.config = validatedConfig
+    this.syncConfig()
+    this.isInitialized = true
+  }
+
+  // This should be called when the config is updated
+  private async syncConfig() {
+    await Bun.write(CONFIG_PATH, JSON.stringify(this.config, null, 2))
+  }
+
+  public async getConfig() {
+    return this.config
+  }
+
+  public async syncSingleConfig(key: keyof ConfigType, value: string) {
+    this.config[key] = value
+    this.syncConfig()
+  }
+
+  public async clearConfig() {
+    await Bun.file(CONFIG_PATH).delete()
+    this.init()
   }
 }
+
+export const configStore = new ConfigStore()
