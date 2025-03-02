@@ -8,12 +8,14 @@ import { configStore } from "./stores/config-store"
 import { databaseStore } from "./stores/database-store"
 import { personalityStore } from "./stores/personality-store"
 import { systemStore } from "./stores/system-store"
+import { userProfileStore } from "./stores/user-profile-store"
 
 // Initialize all stores because they're async
 await configStore.init()
 await databaseStore.init()
 await systemStore.init()
 await personalityStore.init()
+await userProfileStore.init()
 
 // Print system information
 console.log(chalk.green("System Information:"))

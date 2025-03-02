@@ -3,6 +3,9 @@ import { existsSync, mkdirSync } from "fs"
 import { homedir } from "os"
 import { join } from "path"
 
+const DB_DIR = join(homedir(), ".config", "llm")
+const DB_PATH = join(DB_DIR, "data.db")
+
 // Define message types with standard roles
 export type MessageRole = "user" | "assistant" | "tool" | "system"
 
@@ -37,10 +40,6 @@ class DatabaseStore {
   }
 
   public async init() {
-    // Set up database path
-    const DB_DIR = join(homedir(), ".config", "llm")
-    const DB_PATH = join(DB_DIR, "chat.db")
-
     // Create directory if it doesn't exist
     if (!existsSync(DB_DIR)) {
       mkdirSync(DB_DIR, { recursive: true })

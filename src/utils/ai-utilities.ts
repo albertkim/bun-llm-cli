@@ -216,10 +216,10 @@ export async function llmText(
     try {
       // Parse arguments and call the handler
       const args = JSON.parse(toolCall.function.arguments)
-      console.log(chalk.yellow(`Calling ${functionName} with args:`), args)
+      // console.log(chalk.yellow(`Calling ${functionName} with args:`), args)
 
       const result = await functionHandler(args)
-      console.log(chalk.yellow(`Result from ${functionName}:`), result)
+      // console.log(chalk.yellow(`Result from ${functionName}:`), result)
 
       // Add tool response to database
       await databaseStore.addMessage({
