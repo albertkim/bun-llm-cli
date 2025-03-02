@@ -1,8 +1,6 @@
 import chalk from "chalk"
 import { OpenAI } from "openai"
-import { type ChatLog } from "../stores/database-store"
-import { additionTool } from "../tools/addition"
-import { weatherTool } from "../tools/weather"
+import { databaseStore, type Message } from "../stores/database-store"
 
 // Define the tool interface
 export interface Tool {
@@ -17,15 +15,20 @@ export interface Tool {
   handler: (args: any) => Promise<any> | any
 }
 
-const tools = [additionTool, weatherTool]
-
 type ChatCompletionRequestOptions = {
   model: string
   messages: Array<{
     role: "system" | "user" | "assistant" | "tool"
-    content: string
+    content: string | null
     tool_call_id?: string
-    name?: string
+    tool_calls?: Array<{
+      id: string
+      type: string
+      function: {
+        name: string
+        arguments: string
+      }
+    }>
   }>
   stream?: boolean
   tools?: Array<{
@@ -61,24 +64,68 @@ export function getClient(provider: string, apiKey: string) {
   }
 }
 
-export async function llmText(
-  previousChatLogs: ChatLog[],
+async function detectUserMessageSignificance(
   prompt: string,
   provider: string,
   model: string,
   apiKey: string
+): Promise<number> {
+  const response = await llmJSON(
+    [],
+    `
+      You are an advanced and highly intelligent personal assistant for a user. Your goal is to learn about the user and their preferences.
+      Given the following user message, determine if it is significant enough to be stored as part of the permanent user profile.
+      Examples of significant messages:
+      - A user talks about their preferences
+      - A user talks about their history
+      - A user talks about their goals
+      - A user talks about their values
+      - A user talks about their beliefs
+      - A user talks about their interests
+      - A user talks about their hobbies
+      Examples of insignificant messages:
+      - A user asks for the weather
+      - A user asks for the time
+      - A user asks for help with a task
+      - A user asks for recommendations
+      - A user asks for the news
+      
+      But of course, use your best judgement.
+      Return a JSON object with the following format:
+      {
+        reason: string - a short explanation for your answer
+        isSignificant: number - 0 if the message is insignificant, 1 if potentially useful or leading up to something important, 2 if important
+      }
+      The message is: ${prompt}
+    `,
+    provider,
+    model,
+    apiKey
+  )
+  return JSON.parse(response.response).isSignificant as number
+}
+
+export async function llmText(
+  previousMessages: Message[],
+  prompt: string,
+  provider: string,
+  tools: Tool[],
+  model: string,
+  apiKey: string
 ) {
+  const significance = await detectUserMessageSignificance(prompt, provider, model, apiKey)
+  console.log(chalk.gray(`${provider} - ${model} - significance score: ${significance}`))
+
   const client = getClient(provider, apiKey)
 
-  // Convert previous chat logs into message format
-  const previousMessages = previousChatLogs
-    .reverse() // Oldest messages first
-    .flatMap((log) => [
-      { role: "user" as const, content: log.prompt },
-      { role: "assistant" as const, content: log.response }
-    ])
+  // Get formatted message history from the store
+  const formattedMessages = await databaseStore.getMessagesForLLM(50)
 
-  const messages = [...previousMessages, { role: "user" as const, content: prompt }]
+  // Add the current user message
+  formattedMessages.push({
+    role: "user",
+    content: prompt
+  })
 
   // Extract tool definitions for API request
   const toolDefinitions = tools.map((tool) => tool.definition)
@@ -89,7 +136,7 @@ export async function llmText(
   // Create initial request options
   const requestOptions: ChatCompletionRequestOptions = {
     model: model,
-    messages: messages,
+    messages: formattedMessages,
     tools: toolDefinitions,
     tool_choice: "auto",
     stream: false
@@ -97,21 +144,59 @@ export async function llmText(
 
   // Call the API
   const response = await client.chat.completions.create(requestOptions as any)
+
   const assistantMessage = response.choices[0].message
   const toolCalls = assistantMessage.tool_calls || []
+
+  // Save user message to database
+  await databaseStore.addMessage({
+    role: "user",
+    content: prompt,
+    tool_calls: null,
+    tool_call_id: null,
+    model: model,
+    provider: provider,
+    metadata: { significance }
+  })
 
   // If no tool calls were made, return the direct response
   if (toolCalls.length === 0) {
     const content = assistantMessage.content || ""
     process.stdout.write(chalk.green(content + "\n"))
+
+    // Add assistant message to database
+    await databaseStore.addMessage({
+      role: "assistant",
+      content: content,
+      tool_calls: null,
+      tool_call_id: null,
+      model: model,
+      provider: provider,
+      metadata: null
+    })
+
     return {
       response: content,
+      significance: significance,
       tools_used: null
     }
   }
 
   // Otherwise, process the tool calls
-  console.log(chalk.yellow("🔧 Model is using tools..."))
+  console.log(
+    chalk.yellow(`🔧 Model is using tools: ${toolCalls.map((toolCall) => toolCall.function.name).join(", ")}`)
+  )
+
+  // Save assistant message with tool calls
+  await databaseStore.addMessage({
+    role: "assistant",
+    content: assistantMessage.content,
+    tool_calls: toolCalls,
+    tool_call_id: null,
+    model: model,
+    provider: provider,
+    metadata: null
+  })
 
   const toolResults = []
   const usedTools = []
@@ -119,6 +204,9 @@ export async function llmText(
   for (const toolCall of toolCalls) {
     const functionName = toolCall.function.name
     const functionHandler = toolHandlers[functionName]
+
+    // Use the tool call ID from the API or generate one if missing
+    const toolCallId = toolCall.id || `call_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`
 
     if (!functionHandler) {
       console.log(chalk.red(`Tool ${functionName} not found in handlers`))
@@ -133,31 +221,55 @@ export async function llmText(
       const result = await functionHandler(args)
       console.log(chalk.yellow(`Result from ${functionName}:`), result)
 
+      // Add tool response to database
+      await databaseStore.addMessage({
+        role: "tool",
+        content: JSON.stringify(result),
+        tool_calls: null,
+        tool_call_id: toolCallId,
+        model: model,
+        provider: provider,
+        metadata: { tool_name: functionName, args }
+      })
+
       toolResults.push({
-        tool_call_id: toolCall.id,
-        role: "tool" as const,
+        role: "tool",
+        tool_call_id: toolCallId,
         content: JSON.stringify(result)
       })
 
       usedTools.push({
+        id: toolCallId,
         name: functionName,
-        args: args,
-        result: result
+        args,
+        result
       })
     } catch (error) {
       console.error(chalk.red(`Error executing tool ${functionName}:`), error)
+
+      // Save error response
+      await databaseStore.addMessage({
+        role: "tool",
+        content: JSON.stringify({ error: (error as Error).message }),
+        tool_calls: null,
+        tool_call_id: toolCallId,
+        model: model,
+        provider: provider,
+        metadata: { tool_name: functionName, error: (error as Error).message }
+      })
+
       toolResults.push({
-        tool_call_id: toolCall.id,
-        role: "tool" as const,
+        role: "tool",
+        tool_call_id: toolCallId,
         content: JSON.stringify({ error: (error as Error).message })
       })
     }
   }
 
-  // Get final response with tool results (use streaming for a better chat experience)
+  // Get final response with tool results
   const secondResponse = await client.chat.completions.create({
     model: model,
-    messages: [...messages, assistantMessage, ...toolResults],
+    messages: [...formattedMessages, assistantMessage, ...toolResults] as any,
     stream: true
   })
 
@@ -169,114 +281,54 @@ export async function llmText(
   }
   process.stdout.write("\n")
 
+  // Add assistant's final response to database
+  await databaseStore.addMessage({
+    role: "assistant",
+    content: fullResponse,
+    tool_calls: null,
+    tool_call_id: null,
+    model: model,
+    provider: provider,
+    metadata: usedTools.length > 0 ? { tools_used: usedTools } : null
+  })
+
   return {
     response: fullResponse,
+    significance: significance,
     tools_used: usedTools.length > 0 ? JSON.stringify(usedTools) : null
   }
 }
 
 export async function llmJSON(
-  previousChatLogs: ChatLog[],
+  previousMessages: Message[],
   prompt: string,
   provider: string,
   model: string,
-  apiKey: string,
-  tools: Tool[] = []
+  apiKey: string
 ) {
   const client = getClient(provider, apiKey)
 
-  // Convert previous chat logs into message format
-  const previousMessages = previousChatLogs
-    .reverse() // Oldest messages first
-    .flatMap((log) => [
-      { role: "user" as const, content: log.prompt },
-      { role: "assistant" as const, content: log.response }
-    ])
+  // Get formatted message history from the store
+  let messages = previousMessages.length > 0 ? await databaseStore.getMessagesForLLM(50) : []
 
-  const messages = [...previousMessages, { role: "user" as const, content: prompt }]
+  // Add the current prompt
+  messages.push({
+    role: "user",
+    content: prompt
+  })
 
-  // Extract tool definitions for API request
-  const toolDefinitions = tools.map((tool) => tool.definition)
-
-  // Create a map of function names to their handlers
-  const toolHandlers = Object.fromEntries(tools.map((tool) => [tool.definition.function.name, tool.handler]))
-
-  // Create initial request options
-  const requestOptions: ChatCompletionRequestOptions = {
+  // Create request options
+  const requestOptions = {
     model: model,
     messages: messages,
     response_format: { type: "json_object" },
-    tools: toolDefinitions,
-    tool_choice: "auto",
     stream: false
   }
 
+  // Get response
   const response = await client.chat.completions.create(requestOptions as any)
-  const assistantMessage = response.choices[0].message
-  const toolCalls = assistantMessage.tool_calls || []
-
-  // If no tool calls requested, return the JSON response directly
-  if (toolCalls.length === 0) {
-    return {
-      response: assistantMessage.content || "{}",
-      tools_used: null
-    }
-  }
-
-  // Process tool calls
-  console.log(chalk.yellow("🔧 Model is using tools for JSON response..."))
-
-  const toolResults = []
-  const usedTools = []
-
-  for (const toolCall of toolCalls) {
-    const functionName = toolCall.function.name
-    const functionHandler = toolHandlers[functionName]
-
-    if (!functionHandler) {
-      console.log(chalk.red(`Tool ${functionName} not found in handlers`))
-      continue
-    }
-
-    try {
-      // Parse arguments and call the handler
-      const args = JSON.parse(toolCall.function.arguments)
-      console.log(chalk.yellow(`Calling ${functionName} with args:`), args)
-
-      const result = await functionHandler(args)
-      console.log(chalk.yellow(`Result from ${functionName}:`), result)
-
-      toolResults.push({
-        tool_call_id: toolCall.id,
-        role: "tool" as const,
-        content: JSON.stringify(result)
-      })
-
-      usedTools.push({
-        name: functionName,
-        args: args,
-        result: result
-      })
-    } catch (error) {
-      console.error(chalk.red(`Error executing tool ${functionName}:`), error)
-      toolResults.push({
-        tool_call_id: toolCall.id,
-        role: "tool" as const,
-        content: JSON.stringify({ error: (error as Error).message })
-      })
-    }
-  }
-
-  // Get final response with tool results
-  const secondResponse = await client.chat.completions.create({
-    model: model,
-    messages: [...messages, assistantMessage, ...toolResults],
-    response_format: { type: "json_object" },
-    stream: false
-  })
 
   return {
-    response: secondResponse.choices[0]?.message?.content || "{}",
-    tools_used: usedTools.length > 0 ? JSON.stringify(usedTools) : null
+    response: response.choices[0]?.message?.content || "{}"
   }
 }

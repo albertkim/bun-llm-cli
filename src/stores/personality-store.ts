@@ -12,7 +12,7 @@ type PersonalityConfigType = {
   authority: number | null
 }
 
-const expectedConfig: Record<
+export const AVAILABLE_PERSONALITY_FIELDS: Record<
   keyof PersonalityConfigType,
   { key: keyof PersonalityConfigType; type: string; description: string }
 > = {
@@ -56,7 +56,7 @@ function getValidatedPersonalityConfig(config: any): PersonalityConfigType {
     authority: null
   }
 
-  for (const key in expectedConfig) {
+  for (const key in AVAILABLE_PERSONALITY_FIELDS) {
     if (key === "name") {
       validatedConfig[key] = config[key] as string
     } else if (key === "humour") {
@@ -99,7 +99,7 @@ class PersonalityStore {
 
     const validatedConfig = getValidatedPersonalityConfig(existingConfig)
     this.personalityConfig = validatedConfig
-    this.syncConfig()
+    await this.syncConfig()
     this.isInitialized = true
   }
 
@@ -123,12 +123,12 @@ class PersonalityStore {
     } else if (key === "authority") {
       this.personalityConfig[key] = value as number
     }
-    this.syncConfig()
+    await this.syncConfig()
   }
 
   public async clearConfig() {
     await Bun.file(CONFIG_PATH).delete()
-    this.init()
+    await this.init()
   }
 }
 

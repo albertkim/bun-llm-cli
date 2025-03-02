@@ -1,4 +1,6 @@
-export const weatherTool = {
+import type { Tool } from "../utils/ai-utilities"
+
+export const weatherTool: Tool = {
   definition: {
     type: "function",
     function: {

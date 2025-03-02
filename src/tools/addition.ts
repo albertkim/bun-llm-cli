@@ -1,6 +1,8 @@
-export const additionTool = {
+import type { Tool } from "../utils/ai-utilities"
+
+export const additionTool: Tool = {
   definition: {
-    type: "function",
+    type: "function" as const,
     function: {
       name: "addition",
       description: "Add an array of numbers together and return the sum",
