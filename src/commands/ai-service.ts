@@ -48,7 +48,7 @@ async function detectUserMessageSignificance(
     apiKey
   )
 
-  return JSON.parse(response).isSignificant as number
+  return JSON.parse(response.response).isSignificant as number
 }
 
 export const AIService = {
@@ -56,18 +56,24 @@ export const AIService = {
     const previousChatLogs = await databaseStore.getChatLogs()
     const significance = await detectUserMessageSignificance(prompt, provider, model, apiKey)
     console.log(chalk.gray(`${provider} - ${model} - significance score: ${significance}`))
-    const response = await llmText(previousChatLogs, prompt, provider, model, apiKey)
+
+    const result = await llmText(previousChatLogs, prompt, provider, model, apiKey)
+
     const chatLog: CreateChatLog = {
       prompt: prompt,
-      response: response,
+      response: result.response,
       significance: significance,
       provider: provider,
-      model: model
+      model: model,
+      tools_used: result.tools_used
     }
+
     await databaseStore.addChatLog(chatLog)
+
     return {
-      response: response,
-      significance: significance
+      response: result.response,
+      significance: significance,
+      tools_used: result.tools_used
     }
   }
 }
