@@ -1,26 +1,14 @@
+import { tool } from "ai"
 import { homedir } from "os"
 import { join } from "path"
-import type { Tool } from "../utils/ai-utilities"
+import { z } from "zod"
 
 const CONFIG_DIR = join(homedir(), ".config", "llm")
 
-export const getConfigDirectoryTool: Tool = {
-  definition: {
-    type: "function",
-    function: {
-      name: "getConfigDirectory",
-      description: "Get the location of the configuration/settings directory where settings are stored",
-      parameters: {
-        type: "object",
-        properties: {},
-        required: []
-      }
-    }
-  },
-  handler: async () => {
-    return {
-      configDirectory: CONFIG_DIR,
-      message: `Your settings are stored in: ${CONFIG_DIR}`
-    }
+export const getConfigDirectoryTool = tool({
+  description: "Get the location of the configuration/settings directory where settings are stored",
+  parameters: z.object({}),
+  execute: async () => {
+    return CONFIG_DIR
   }
-}
+})

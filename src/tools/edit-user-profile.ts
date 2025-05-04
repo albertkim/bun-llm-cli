@@ -1,42 +1,23 @@
+import { tool } from "ai"
+import { z } from "zod"
 import { AVAILABLE_USER_PROFILE_FIELDS, userProfileStore } from "../stores/user-profile-store"
-import type { Tool } from "../utils/ai-utilities"
 
-export const editUserProfileTool: Tool = {
-  definition: {
-    type: "function",
-    function: {
-      name: "editUserProfile",
-      description: `Edit the user's profile information - use this when the user wants to update their profile details - possible fields are ${Object.keys(AVAILABLE_USER_PROFILE_FIELDS).join(", ")}`,
-      parameters: {
-        type: "object",
-        properties: Object.fromEntries(
-          Object.entries(AVAILABLE_USER_PROFILE_FIELDS).map(([key, config]) => [
-            key,
-            {
-              type: config.type,
-              description: config.description
-            }
-          ])
-        ),
-        required: []
-      }
-    }
-  },
-  handler: async (
-    args: Partial<{
-      name: string
-      location: string
-      age: number
-      gender: string
-      occupation: string
-      interests: string
-      goals: string
-      values: string
-      beliefs: string
-      challenges: string
-      life_story: string
-    }>
-  ) => {
+export const editUserProfileTool = tool({
+  description: `Edit the user's profile information - use this when you learn something new about the user that is worth remembering - possible fields are ${Object.keys(AVAILABLE_USER_PROFILE_FIELDS).join(", ")}`,
+  parameters: z.object({
+    name: z.string().optional(),
+    location: z.string().optional(),
+    age: z.number().optional(),
+    gender: z.string().optional(),
+    occupation: z.string().optional(),
+    interests: z.string().optional(),
+    goals: z.string().optional(),
+    values: z.string().optional(),
+    beliefs: z.string().optional(),
+    challenges: z.string().optional(),
+    life_story: z.string().optional()
+  }),
+  execute: async (args) => {
     const updates = []
 
     for (const [key, value] of Object.entries(args)) {
@@ -52,4 +33,4 @@ export const editUserProfileTool: Tool = {
       userProfile: userProfileStore.getConfig()
     }
   }
-}
+})

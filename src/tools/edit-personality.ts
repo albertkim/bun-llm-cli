@@ -1,34 +1,17 @@
+import { tool } from "ai"
+import { z } from "zod"
 import { AVAILABLE_PERSONALITY_FIELDS, personalityStore } from "../stores/personality-store"
-import type { Tool } from "../utils/ai-utilities"
 
-export const editPersonalityTool: Tool = {
-  definition: {
-    type: "function",
-    function: {
-      name: "editPersonality",
-      description: `Edit your personality settings - use this when the user wants to change your personality traits - possible settings are ${Object.keys(AVAILABLE_PERSONALITY_FIELDS).join(", ")}`,
-      parameters: {
-        type: "object",
-        properties: Object.fromEntries(
-          Object.entries(AVAILABLE_PERSONALITY_FIELDS).map(([key, config]) => [
-            key,
-            {
-              type: config.type,
-              description: config.description + (config.type === "number" ? " (0-10)" : "")
-            }
-          ])
-        ),
-        required: []
-      }
-    }
-  },
-  handler: async (args: {
-    name?: string
-    humour?: number
-    empathy?: number
-    intelligence?: number
-    authority?: number
-  }) => {
+export const editPersonalityTool = tool({
+  description: `Edit your AI personality settings - use this when the user wants to change your personality traits - possible settings are ${Object.keys(AVAILABLE_PERSONALITY_FIELDS).join(", ")}`,
+  parameters: z.object({
+    name: z.string().optional(),
+    humour: z.number().optional(),
+    empathy: z.number().optional(),
+    intelligence: z.number().optional(),
+    authority: z.number().optional()
+  }),
+  execute: async (args) => {
     const updates = []
 
     for (const [key, value] of Object.entries(args)) {
@@ -43,4 +26,4 @@ export const editPersonalityTool: Tool = {
       personality: personalityStore.personalityConfig
     }
   }
-}
+})

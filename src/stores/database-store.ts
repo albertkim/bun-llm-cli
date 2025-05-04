@@ -36,7 +36,6 @@ class DatabaseStore {
   private db: Database
 
   constructor() {
-    // Initialize the database in memory, but initialize to a file with the .init() method
     this.db = new Database(":memory:")
   }
 

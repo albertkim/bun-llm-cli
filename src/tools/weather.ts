@@ -1,29 +1,14 @@
-import type { Tool } from "../utils/ai-utilities"
+import { tool } from "ai"
+import { z } from "zod"
 
-export const weatherTool: Tool = {
-  definition: {
-    type: "function",
-    function: {
-      name: "getWeather",
-      description: "Get the current weather for a location",
-      parameters: {
-        type: "object",
-        properties: {
-          location: {
-            type: "string",
-            description: "The city and state/country to get weather for"
-          }
-        },
-        required: ["location"]
-      }
-    }
-  },
-
-  // Handler function that implements the tool
-  handler: async (args: { location: string }) => {
-    // This is just sample data for testing purposes
+export const weatherTool = tool({
+  description: "Get the current weather for a location",
+  parameters: z.object({
+    location: z.string().describe("The city and state/country to get weather for")
+  }),
+  execute: async ({ location }) => {
     return {
-      location: args.location,
+      location: location,
       temperature: {
         current: 72,
         feels_like: 74,
@@ -47,4 +32,4 @@ export const weatherTool: Tool = {
       ]
     }
   }
-}
+})
