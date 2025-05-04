@@ -4,8 +4,6 @@ import dotenv from "dotenv"
 import express from "express"
 import { DEFAULT_LLM_PROVIDER, getSystemPrompt, tools } from "../common/config"
 import { databaseStore } from "../common/stores/database-store"
-import { personalityStore, type PersonalityConfigType } from "../common/stores/personality-store"
-import { userProfileStore, type UserProfileConfigType } from "../common/stores/user-profile-store"
 
 dotenv.config({ path: "../.env" })
 
@@ -28,16 +26,12 @@ app.use((req, res, next) => {
   next()
 })
 
-// Initialize stores
-let currentPersonality: PersonalityConfigType | null = null
-let currentUserProfile: UserProfileConfigType | null = null
+// Message history
 let messages: CoreMessage[] = []
 
+// Initialize stores
 async function initializeStores() {
   await databaseStore.init()
-  currentPersonality = await personalityStore.getConfig()
-  currentUserProfile = await userProfileStore.getConfig()
-
   const conversationHistory = await databaseStore.getMessages()
   messages = []
   messages.push({ role: "system", content: await getSystemPrompt() })
@@ -53,6 +47,8 @@ async function initializeStores() {
     }
   }
 }
+
+await initializeStores()
 
 // Basic health check endpoint
 app.get("/health", async (req, res) => {
@@ -101,8 +97,6 @@ app.post("/api/chat", async (req, res) => {
     res.status(500).json({ error: "Internal server error" })
   }
 })
-
-await initializeStores()
 
 app.listen(port, () => {
   console.log(`API Server running on port ${port}`)
