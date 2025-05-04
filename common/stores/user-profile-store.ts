@@ -5,7 +5,7 @@ import { join } from "path"
 const CONFIG_DIR = join(homedir(), ".config", "llm")
 const CONFIG_PATH = join(CONFIG_DIR, "user-profile.json")
 
-type UserProfileConfigType = {
+export type UserProfileConfigType = {
   name: string | null
   location: string | null
   age: number | null

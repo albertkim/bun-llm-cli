@@ -4,7 +4,7 @@ import { join } from "path"
 const CONFIG_DIR = join(homedir(), ".config", "llm")
 const CONFIG_PATH = join(CONFIG_DIR, "personality.json")
 
-type PersonalityConfigType = {
+export type PersonalityConfigType = {
   name: string | null
   humour: number | null
   empathy: number | null
