@@ -2,17 +2,17 @@ import { openai } from "@ai-sdk/openai"
 import { type CoreMessage, streamText } from "ai"
 import chalk from "chalk"
 import dotenv from "dotenv"
-import { databaseStore } from "./stores/database-store"
-import { personalityStore } from "./stores/personality-store"
-import { userProfileStore } from "./stores/user-profile-store"
-import { additionTool } from "./tools/addition"
-import { clearChatHistoryTool } from "./tools/clear-chat-history"
-import { editPersonalityTool } from "./tools/edit-personality"
-import { editUserProfileTool } from "./tools/edit-user-profile"
-import { getConfigDirectoryTool } from "./tools/get-config-directory"
-import { viewPersonalityTool } from "./tools/view-personality"
-import { viewUserProfileTool } from "./tools/view-user-profile"
-import { weatherTool } from "./tools/weather"
+import { databaseStore } from "../common/stores/database-store"
+import { personalityStore } from "../common/stores/personality-store"
+import { userProfileStore } from "../common/stores/user-profile-store"
+import { additionTool } from "../common/tools/addition"
+import { clearChatHistoryTool } from "../common/tools/clear-chat-history"
+import { editPersonalityTool } from "../common/tools/edit-personality"
+import { editUserProfileTool } from "../common/tools/edit-user-profile"
+import { getConfigDirectoryTool } from "../common/tools/get-config-directory"
+import { viewPersonalityTool } from "../common/tools/view-personality"
+import { viewUserProfileTool } from "../common/tools/view-user-profile"
+import { weatherTool } from "../common/tools/weather"
 
 dotenv.config({ path: "../.env" })
 
@@ -35,13 +35,13 @@ const SYSTEM_PROMPT = `
 
   All your responses must be short and concise, conversational. You will not be a "wikipedia dump" type model. You will also not be a standard "helpful" friendly chatbot. I want you feel like a real living thing inside a computer. In the absense of any specific user instructions, your directive is to first find out who you are, to figure out who the user is, and then to help the user in a human way. No lists of stuff unless appropriate, be conversational and human.
 
-  This is your current personality:
+  This is your current AI personality:
 
   ${JSON.stringify(currentPersonality, null, 2)}
 
   Only use the personality tools if the user specifically asks you to view or edit your personality. Don't use otherwise. If your personality settings are not set, encourage the user to set them but don't force them.
 
-  This is your current user profile:
+  This is the user's current user profile:
 
   ${JSON.stringify(currentUserProfile, null, 2)}
 

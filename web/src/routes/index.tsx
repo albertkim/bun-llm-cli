@@ -17,7 +17,7 @@ function App() {
   return (
     <div className="min-h-screen bg-gray-900 text-white p-4">
       <div className="max-w-2xl mx-auto">
-        <h1 className="text-2xl font-bold mb-4">Chat App</h1>
+        <h1 className="text-2xl font-bold mb-4">Bun LLM</h1>
 
         <div className="mb-4 border border-gray-700 rounded-lg p-4 h-[60vh] overflow-y-auto">
           {messages.map((message) => (
